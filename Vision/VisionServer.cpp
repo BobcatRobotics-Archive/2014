@@ -7,33 +7,51 @@
  * Modified for 2014 by D. Schroeder
  */
 
-#include "CVHeader.h"
-#include "CurlUtils.h"
-
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <unistd.h>
-#define GUI
+
+#include "VisionServer.h"
+
+// Variables used for thread synchronization
+pthread_mutex_t img_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t image_ready_cond = PTHREAD_COND_INITIALIZER;;
+uint8_t image_ready = 0;
+pthread_t curl_thread, recv_thread;
+Mat img_buf;
+
+int process();
+int erosion_elem = 0;
+int erosion_size = 10;
+int dilation_elem = 0;
+int dilation_size = 10;
+int hmin = 0;
+int smin = 0;
+int lmin = 160;
+int hmax = 180;
+int smax = 255;
+int lmax = 255;
+
 #ifdef GUI
 #include "opencv2/highgui/highgui.hpp"
 Mat dst;
+int const max_elem = 2;
+int const max_kernel_size = 21;
+
+void UpdateGUI(int x, void *p)
+{
+    cout << "Mins: " << hmin << " " << smin << " " << lmin << endl;
+    cout << "Maxs: " << hmax << " " << smax << " " << lmax << endl;
+    process();
+    waitKey(10);
+}
+
 #endif
 
-/// Global Variables
-Mat rgbimg; Mat templ; Mat result; Mat dilateimg;
-Mat binimg; Mat img; Mat erodeimg; Mat gencanny; Mat canny;
-Size dilatesize(20, 20);
-
-
-// Constants
-const int width_in = 24;
-const int height_in = 18;
-
-
-/// Function Headers
+// / Function Headers
 void RunServer();
 int process();
 inline uint64_t endian_swap(uint64_t x);
@@ -41,214 +59,237 @@ inline uint64_t endian_swap(uint64_t x);
 /**
  * @function main
  */
-int main( int argc, char** argv)
+int main(int argc, char **argv)
 {
     cout << "Starting 177 Vision Server" << endl;
-	
+#ifdef DEBUG
+    cout << "Curl Version: " << curl_version() << endl;
+#endif
 #ifdef GUI
-	// Create window
-    namedWindow( "Image", CV_WINDOW_AUTOSIZE );
-	
-#endif	
-	//Initialize the Server 
-	RunServer();
+    // Create window
+    namedWindow("Image", CV_WINDOW_AUTOSIZE);
+    namedWindow("Controls", CV_WINDOW_AUTOSIZE);
+    resizeWindow("Controls", 600, 600);
+    /// Create Erosion Trackbar
+    createTrackbar(" E Element:\n 0: Rect \n 1: Cross \n 2: Ellipse", "Controls", &erosion_elem, max_elem, UpdateGUI);
+
+    createTrackbar("E Kernel size:\n 2n +1", "Controls", &erosion_size, max_kernel_size, UpdateGUI);
+
+    /// Create Dilation Trackbar
+    createTrackbar("D Element:\n 0: Rect \n 1: Cross \n 2: Ellipse", "Controls", &dilation_elem, max_elem, UpdateGUI);
+
+    createTrackbar("D Kernel size:\n 2n +1", "Controls", &dilation_size, max_kernel_size, UpdateGUI);
+
+    //HSV trackbars
+    createTrackbar("H Min", "Controls", &hmin, 180, UpdateGUI);
+    createTrackbar("S Min", "Controls", &smin, 255, UpdateGUI);
+    createTrackbar("L Min", "Controls", &lmin, 255, UpdateGUI);
+    createTrackbar("H Max", "Controls", &hmax, 180, UpdateGUI);
+    createTrackbar("S Max", "Controls", &smax, 255, UpdateGUI);
+    createTrackbar("L Max", "Controls", &lmax, 255, UpdateGUI);
+
+#endif
+
+    int rc = pthread_create(&curl_thread, NULL, GetImagesThread, NULL);
+    if (rc) {
+        printf("ERROR; return code from pthread_create() is %d\n", rc);
+        exit(-1);
+    }
+
+    rc = pthread_create(&recv_thread, NULL, ReceiveThread, NULL);
+    if (rc) {
+        printf("ERROR; return code from pthread_create() is %d\n", rc);
+        exit(-1);
+    }
+    // Initialize the Server 
+    RunServer();
 }
 
 /**
 * @function process
 **/
-int process() {
-  int contour_cnt = 0;
-  /// Print diagnostic message
-  cout << "Starting frame..." << endl;
+int process()
+{
+    Mat bgrimg;
+    Mat hlsimg;
+    Mat binimg;
+    //Mat templ;
+    //Mat result;
+    Mat dilateimg;
+    //Mat img;
+    Mat erodeimg;
+    int contour_cnt = 0;
+    int rc;
+    //Mat canny_output;
+    vector < vector < Point > >contours;
+    vector < Vec4i > hierarchy;
+#ifdef DEBUG
+    clock_t begin, end;
+    int clk_tck = sysconf(_SC_CLK_TCK);
+    struct tms t;
+    // / Print diagnostic message
+    begin = times(&t);
+    cout << "Starting frame... " << endl;
+#endif
 
-  /// Load image from camera (via curl)
-  rgbimg = CurlUtils::fetchImg("http://10.1.77.11/axis-cgi/jpg/image.cgi");
-  if(rgbimg.empty()) {
-	cout << "Empty Image" << endl;
-	return -1;
-  }
+    // Get Mutex
+    pthread_mutex_lock(&img_mutex);
+    // Wait for data to be available
+    rc = 0;
+    while (!image_ready && rc == 0) {
+        rc = pthread_cond_wait(&image_ready_cond, &img_mutex);
+    }
+    if (rc != 0) {
+        pthread_mutex_unlock(&img_mutex);
+        cout << "pthread error: " << rc << endl;
+        return -1;
+    }
+    img_buf.copyTo(bgrimg);
+    image_ready = 0;
+    // Release Mutex
+    pthread_mutex_unlock(&img_mutex);
 
-  /// Threshold by BGR values
-  inRange(rgbimg, Scalar(160, 0, 0), Scalar(255, 255, 255), binimg);
-  
-  ///Filter noise in image
-  Mat element = getStructuringElement(0, Size(10,10));
-  erode(binimg, erodeimg, element);
-  Mat dilateelement = getStructuringElement(0, dilatesize);
-  dilate(erodeimg, dilateimg, dilateelement);
+#ifdef DEBUG
+    end = times(&t);
+    cout << "Get Time: " << double (end - begin) / clk_tck << endl;
+    begin = times(&t);
+#endif
 
-  Mat canny_output;
-  vector<vector<Point> > contours;
-  vector<Vec4i> hierarchy;
+    // / Threshold by BGR values
+    //inRange(bgrimg, Scalar(160, 0, 0), Scalar(255, 255, 255), binimg);
 
-  //Mat img_display;
-  //dilateimg.copyTo(img_display);
+    //convert to HLS
+    cvtColor(bgrimg, hlsimg, CV_BGR2HLS);
+    //Threshold
+    inRange(hlsimg, Scalar(hmin, lmin, smin), Scalar(hmax, lmax, smax), binimg);
 
-  /// Detect edges using canny
-  Canny( dilateimg, canny_output, 200, 400, 3 );
-  /// Find contours
-  findContours( canny_output, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0, 0) );
+    // /Filter noise in image
+    int erosion_type;
+    if (erosion_elem == 0) {
+        erosion_type = MORPH_RECT;
+    } else if (erosion_elem == 1) {
+        erosion_type = MORPH_CROSS;
+    } else if (erosion_elem == 2) {
+        erosion_type = MORPH_ELLIPSE;
+    }
+    Mat element = getStructuringElement(erosion_type, Size(2 * erosion_size + 1, 2 * erosion_size + 1),
+                                        Point(erosion_size, erosion_size));
+    erode(binimg, erodeimg, element);
 
-#ifdef GUI  
-  rgbimg.copyTo( dst, canny_output);
-  imshow( "Image", dst );
-#endif 
+    int dilation_type;
+    if (dilation_elem == 0) {
+        dilation_type = MORPH_RECT;
+    } else if (dilation_elem == 1) {
+        dilation_type = MORPH_CROSS;
+    } else if (dilation_elem == 2) {
+        dilation_type = MORPH_ELLIPSE;
+    }
+    Mat dilateelement = getStructuringElement(dilation_type, Size(2 * dilation_size + 1, 2 * dilation_size + 1),
+                                              Point(dilation_size, dilation_size));
+    dilate(erodeimg, dilateimg, dilateelement);
 
-  /// Check to see if any targets in the image (Avoids SEGFAULT!)
-  if(contours.size() > 0) {
+    // / Find contours
+    findContours(dilateimg, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0, 0));
+#ifdef DEBUG
+    end = times(&t);
+    cout << "Process Time: " << double (end - begin) / clk_tck << endl;
+    begin = times(&t);
+#endif
+#ifdef GUI
+    bgrimg.copyTo(dst);
+    if (hierarchy.size() > 0) {
+        int idx = 0;
+        for (; idx >= 0; idx = hierarchy[idx][0]) {
+            Scalar color(rand() & 255, rand() & 255, rand() & 255);
+            drawContours(dst, contours, idx, color, CV_FILLED, 80, hierarchy);
+        }
 
-      /// Find contour bigger than threshold with lowest y value
-      int miny = canny_output.rows;
-      double area = 0;
-      RotatedRect temprect;
-      RotatedRect minRect;
-      for (int i = 0; i < contours.size(); i++) {
-        area = contourArea(contours[i]);
-        if(area > THRESH) {
-		   contour_cnt++;
-           /*temprect = minAreaRect(contours[i]);
-	   //Make sure we're getting outside contour
-	   int midx = temprect.center.x;
-           int midy = temprect.center.y-(temprect.size.height/2)+10;
-	   if(dilateimg.at<uchar>(midy, midx) > 250) {
-             if (temprect.center.y < miny) {
-                 miny = temprect.center.y;
-                 minRect = temprect;
-             }*/
-          }
-       }
-   }
+    }
+    imshow("Image", dst);
+#ifdef DEBUG
+    end = times(&t);
+    cout << "Display Time: " << double (end - begin) / clk_tck << endl;
+    begin = times(&t);
+#endif
+#endif
 
-  
-  
+    // / Check to see if any targets in the image (Avoids SEGFAULT!)
+    if (contours.size() > 0) {
+        // / Find contour bigger than threshold with lowest y value
+        double area = 0;
+        for (int i = 0; i < contours.size(); i++) {
+            area = contourArea(contours[i]);
+            cout << i << ": " << area << endl;
+            if (area > THRESH) {
+                contour_cnt++;
+            }
+        }
+    }
+#ifdef DEBUG
+    end = times(&t);
+    cout << "Count Time: " << double (end - begin) / clk_tck << endl;
+    begin = times(&t);
     cout << "Contours found: " << contour_cnt << endl;
-	return contour_cnt;
-#if 0	
-    /// Check for presence of properly sized contour
-	if(contour_cnt == 0) {
-	 	cout << "No Target of Sufficient Size!" << endl;
-		return 0;
-	}
-
-      /// Lots of math to find distance and bearing to target
-      double xdist = abs(dilateimg.cols/2 - minRect.center.x); 
-      double ydist = abs(dilateimg.rows/2 - minRect.center.y);
-      double d = (p0*d0)/minRect.size.height;
-      //double m_width_in = (minRect.size.width/minRect.size.height)*height_in;
-      //double psi = atan(m_width_in/d);
-      //double alpha = asin(d/width_in*sin(psi));
-      //double theta = (PI/2) - psi - alpha;
-      double deltax = toDegrees(atan(((height_in/minRect.size.height)*xdist)/d));
-      double deltay = toDegrees(atan(((height_in*ydist)/minRect.size.height)/d));
-
-      /// Print pertinant results
-     /* cout << "W: " << minRect.size.width - dilatesize.width  << endl;
-      cout << "H: " << minRect.size.height - dilatesize.height << endl;
-      cout << "Center (X, Y): (" << minRect.center.x << ", " << minRect.center.y << ")" << endl;*/
-
-     cout << "Distance: " << d << endl;
-     cout << "DeltaX: " << deltax << endl;
-     cout << "DeltaY: " << deltay << endl;
-
-     /// Convert to big endian and transmit to cRIO
-     uint64_t ud = endian_swap(*(uint64_t *)&d);
-     uint64_t udeltax = endian_swap(*(uint64_t *)&deltax);
-     uint64_t udeltay = endian_swap(*(uint64_t *)&deltay);
-
-      /// Return pertinant results to Server thread
-      //string output = convertNum<double>(d) + "," + convertNum<double>(toDegrees(deltax)) + "," + convertNum<double>(toDegrees(deltay));
-      write(sockfd, (char *)&ud, sizeof(ud));
-      write(sockfd, (char *)&udeltax, sizeof(udeltax));
-      write(sockfd, (char *)&udeltay, sizeof(udeltay));
-
-
-  } else {
-    cout << "Error: No Target in View" << endl;
-    return 1;
-  }
 #endif
+    return contour_cnt;
 }
 
-#define SRV_IP "10.1.77.2"
-	
-void RunServer() {
-	struct sockaddr_in si_other;
-	int s, i, slen=sizeof(si_other);
-	char buff[256];
-	int8_t result;
-	if((s=socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP))==-1) {
-		perror("socket");
-		exit(1);
-	}
+void RunServer()
+{
+    struct sockaddr_in si_other;
+    int s, i, slen = sizeof(si_other);
+    int8_t result;
 
-	memset((char *) &si_other, 0, sizeof(si_other));
-	si_other.sin_family = AF_INET;
-	si_other.sin_port = htons(10177);
-	if(inet_aton(SRV_IP, &si_other.sin_addr)==0) {
-		perror("inet_Aton() failed");
-		exit(1);
-	}
-	
-	while(true) {
-		result =  process();
-		if(sendto(s, (char *)&result, sizeof(int), 0, (struct sockaddr *)&si_other, slen)==-1) {
-			perror("Sendto()");
-			exit(1);
-		}
-	}
-
-#if 0
-  /// Create server socket and continuously accept connections
-  int sockfd, newsockfd, portno = 0;
-  socklen_t clilen;
-  char buffer[256];
-  struct sockaddr_in serv_addr, cli_addr;
-  int n;
-
-  sockfd = socket(AF_INET, SOCK_STREAM, 0);
-  if(sockfd < 0) {
-	  cout << "ERROR: Can't open socket" << endl;
-  }
-  bzero((char*) &serv_addr, sizeof(serv_addr));
-  portno = 10177;
-  serv_addr.sin_family = AF_INET;
-  serv_addr.sin_addr.s_addr = INADDR_ANY;
-  serv_addr.sin_port = htons(portno);
-
-  if(bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
-	  cout << "ERROR: Can't bind" << endl;
-  }
-  listen(sockfd, 5);
-while(true) {
-  newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
-  if(newsockfd < 0) {
-	cout << "ERROR: Couldn't accept" << endl;
-  }
-
-  while(true) {
-	int result =  process(P0, D0, newsockfd);
-  }
-}
+#ifdef DEBUG
+    clock_t begin, end;
+    int clk_tck = sysconf(_SC_CLK_TCK);
+    struct tms t;
 #endif
+
+    if ((s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1) {
+        perror("socket");
+        exit(1);
+    }
+
+    memset((char *)&si_other, 0, sizeof(si_other));
+    si_other.sin_family = AF_INET;
+    si_other.sin_port = htons(10177);
+    if (inet_aton(SRV_IP, &si_other.sin_addr) == 0) {
+        perror("inet_Aton() failed");
+        exit(1);
+    }
+
+    while (true) {
+#ifdef DEBUG
+        begin = times(&t);
+#endif
+        result = process();
+        if (sendto(s, (char *)&result, sizeof(int8_t), 0, (struct sockaddr *)&si_other, slen) == -1) {
+            perror("Sendto()");
+            exit(1);
+        }
+#ifdef DEBUG
+        end = times(&t);
+        cout << "** Cycle Time: " << double (end - begin) / clk_tck << endl;
+#endif
+#ifdef GUI
+        if (waitKey(0) == 'q') {
+            exit(0);
+        }
+#endif
+    }
 }
 
-/// Converts Radians to Degrees
+// / Converts Radians to Degrees
 double toDegrees(double angle)
 {
-  return angle*(180/PI);
+    return angle * (180 / PI);
 }
 
-/// Swaps endians
-inline uint64_t endian_swap(uint64_t x) {
-	return (x>>56) |
-	    ((x<<40) & 0x00FF000000000000) |
-	    ((x<<24) & 0x0000FF0000000000) |
-	    ((x<<8)  & 0x000000FF00000000) |
-	    ((x>>8)  & 0x00000000FF000000) |
-	    ((x>>24) & 0x0000000000FF0000) |
-	    ((x>>40) & 0x000000000000FF00) |
-            (x<<56);
+// / Swaps endians
+inline uint64_t endian_swap(uint64_t x)
+{
+    return (x >> 56) |
+        ((x << 40) & 0x00FF000000000000) |
+        ((x << 24) & 0x0000FF0000000000) | ((x << 8) & 0x000000FF00000000) | ((x >> 8) & 0x00000000FF000000) | ((x >> 24) & 0x0000000000FF0000) | ((x >> 40) & 0x000000000000FF00) | (x << 56);
 }
-
-

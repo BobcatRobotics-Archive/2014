@@ -1,0 +1,24 @@
+0. install appropriate libraries (libcurl4-openssl-dev, libopencv-dev)
+
+1. install vision server in /home/pi/Vision
+2. copy vision to /etc/init.d
+3. edit /etc/network/interfaces
+iface eth0 inet static
+address 10.1.77.12
+netmask 255.255.255.0
+
+4. in /etc/rc4.d
+sudo rm S02cron
+sudo rm S02dbus
+sudo rm S02ntp
+sudo rm S02rsync
+sudo rm S03lightdm
+sudo rm S04rc.local
+sudo ln -s /etc/init.d/vision S04vision
+
+5. edit /etc/inittab
+change:
+id:2:initdefault:
+to
+id:4:initdefault:
+
