@@ -1,24 +1,42 @@
-0. install appropriate libraries (libcurl4-openssl-dev, libopencv-dev)
+0. install appropriate libraries:
+apt-get update
+apt-get upgrade
+apt-get install libcurl4-openssl-dev
+apt-get install libopencv-dev
+apt-get install rpi-update
+rpi-update
+
+sudo apt-get install gpac
+
+
+run raspi-config and enable turbo overclocking
 
 1. install vision server in /home/pi/Vision
 2. copy vision to /etc/init.d
 3. edit /etc/network/interfaces
 iface eth0 inet static
-address 10.1.77.12
+address 10.1.77.91
 netmask 255.255.255.0
 
-4. in /etc/rc4.d
-sudo rm S02cron
-sudo rm S02dbus
-sudo rm S02ntp
-sudo rm S02rsync
-sudo rm S03lightdm
-sudo rm S04rc.local
-sudo ln -s /etc/init.d/vision S04vision
+4. Run:
+sudo update-rc.d vision defaults
 
-5. edit /etc/inittab
-change:
-id:2:initdefault:
-to
-id:4:initdefault:
+5. sudo mkdir /media
+add the following line to /etc/fstab (mounts usb drive at boot)
+/dev/sda1       /media          vfat    rw,user,exec,umask=000  0       1
 
+
+
+--
+sudo apt-get install g++-4.7
+sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.6 60 --slave /usr/bin/g++ g++ /usr/bin/g++-4.6 
+sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.7 40 --slave /usr/bin/g++ g++ /usr/bin/g++-4.7 
+sudo update-alternatives --config gcc
+git clone https://github.com/NorthernForce/2014-Vision.git
+cd 2014-Vision/src
+cmake .
+
+-- 
+copy picam source to the RPi
+cmake .
+make

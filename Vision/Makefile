@@ -4,13 +4,14 @@
 #
 
 # Calibration Variables
-THRESH=5000.0
+THRESH=500.0
 
 # Other variables
 FLAGS = -O3 `pkg-config --cflags opencv`
 PKG_CONFIG_PATH=/usr/local/opencv2.4.8/lib/pkgconfig/
 LIBS=`pkg-config --libs opencv`
-DEFINES = -DDEBUG -DUSE_THREADS -DBIDIRECTIONAL -DTHRESH=$(THRESH) -DSIM_CAM 
+DEFINES = -DTHRESH=$(THRESH) -DDEBUG -DGUI
+# -DSIM_CAM 
 #-DRPI -DGUI
 
 all: VisionServer SendBroadcast
@@ -31,8 +32,13 @@ SendBroadcast: SendBroadcast.cpp
 	g++ SendBroadcast.cpp -o SendBroadcast
 	
 clean:
-	rm -rf *.o VisionServer.exe VisionServer
+	rm -rf *.o  *~ *.stackdump VisionServer.exe VisionServer
 	
 #fix file formating
 indent:
 	indent -linux -i4 -nut -l200 *.cpp *.h
+	
+pi:
+	rsync -avz *.cpp *.h pi@10.1.77.91:Vision
+	ssh -l pi 10.1.77.91  "cd Vision;make"
+

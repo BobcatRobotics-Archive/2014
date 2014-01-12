@@ -1,6 +1,8 @@
 
 #include "VisionServer.h"
 #include <errno.h>
+#include "PiCam.hpp"
+extern PiCam *cam;
 
 //UDP Receive Thread
 void *ReceiveThread(void *arg)
@@ -14,6 +16,9 @@ void *ReceiveThread(void *arg)
     Mat rgbimg;
     int rc;
     struct timespec ts;
+	char fn[256];       
+	time_t now;
+    struct tm tim;
 
     cout << "Starting Receive Thread" << endl;
 
@@ -38,20 +43,25 @@ void *ReceiveThread(void *arg)
 #endif
             if (inbuf[0] == 'A') {
                 cout << "Starting Auto" << endl;
+				if(cam == NULL ) {
+					//restart the camera if it was stoped
+					cout << "Restarting Camera" << endl;
+					cam = new PiCam(320, 240, &process_frame);
+				}
                 // Store the next received image
                 pthread_mutex_lock(&img_mutex);
-
+#if 0
                 // Wait for data to be available
                 clock_gettime(CLOCK_REALTIME, &ts);
                 ts.tv_sec += 5; //wait 5 seconds
                 rc = pthread_cond_timedwait(&image_ready_cond, &img_mutex, &ts);
+#endif
                 if (rc == 0) {
-                    img_buf.copyTo(rgbimg);
+                    write_img.copyTo(rgbimg);
                     // Write the data to a file
-                    char fn[256];
-                    time_t now = time(NULL);
-                    struct tm tim = *(localtime(&now));
-                    strftime(fn, 256, "/media/%F-%H%M%S.bmp", &tim);
+                    now = time(NULL);
+                    tim = *(localtime(&now));
+                    					strftime(fn, 256, "/media/%F-%H%M%S.bmp", &tim);
                     imwrite(fn, rgbimg);
                 } else if (rc == ETIMEDOUT) {
                     cout << "Timed out waiting for image in ReceiveThread\n";
@@ -59,12 +69,16 @@ void *ReceiveThread(void *arg)
                     cout << "Thread error in ReceiveThread: " << rc << endl;
                 }
                 pthread_mutex_unlock(&img_mutex);
-            } else if (inbuf[0] == 'S') {
+			} else if (inbuf[0] == 'S') {
                 cout << "Shuting down" << endl;
                 system("/usr/bin/sudo shutdown -Ph now");
             } else if (inbuf[0] == 'T') {
                 cout << "Starting Teleop" << endl;
-                //switch to video recording?
+                //switch to video recording
+				cam->Stop();
+				delete cam;
+				cam = NULL;
+				system("/home/pi/picam/RecordMatch 2>&1 > /media/reclog &");
             }
         }
     }

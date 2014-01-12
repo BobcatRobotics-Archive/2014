@@ -1,0 +1,7 @@
+#!/bin/sh
+
+DATEFN=`date +"/media/%Y-%m-%d-%H%M%S"`
+
+raspivid -fps 30 -t 140000 -o ${DATEFN}.h264
+#MP4Box -add ${DATEFN}.h264 ${DATEFN}.mp4
+

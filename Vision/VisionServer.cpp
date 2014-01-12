@@ -25,15 +25,25 @@ Mat img_buf;
 
 int process();
 int erosion_elem = 0;
-int erosion_size = 10;
+int erosion_size = 3;
 int dilation_elem = 0;
-int dilation_size = 10;
-int hmin = 0;
-int smin = 0;
-int lmin = 160;
-int hmax = 180;
+int dilation_size = 5;
+#define RGB
+#ifdef RGB
+int rmin = 0;
+int gmin = 222;
+int bmin = 0;
+int rmax = 40;
+int gmax = 255;
+int bmax = 255;
+#else
+int hmin = 55;
+int smin = 45;
+int lmin = 36;
+int hmax = 95;
 int smax = 255;
 int lmax = 255;
+#endif
 
 #ifdef GUI
 #include "opencv2/highgui/highgui.hpp"
@@ -43,8 +53,13 @@ int const max_kernel_size = 21;
 
 void UpdateGUI(int x, void *p)
 {
+#ifdef RGB
+    cout << "Mins: " << rmin << " " << gmin << " " << bmin << endl;
+    cout << "Maxs: " << rmax << " " << gmax << " " << bmax << endl;
+#else
     cout << "Mins: " << hmin << " " << smin << " " << lmin << endl;
     cout << "Maxs: " << hmax << " " << smax << " " << lmax << endl;
+#endif
     process();
     waitKey(10);
 }
@@ -80,14 +95,23 @@ int main(int argc, char **argv)
 
     createTrackbar("D Kernel size:\n 2n +1", "Controls", &dilation_size, max_kernel_size, UpdateGUI);
 
+#ifdef RGB
+    //RGB trackbars
+    createTrackbar("R Min", "Controls", &rmin, 255, UpdateGUI);
+    createTrackbar("G Min", "Controls", &gmin, 255, UpdateGUI);
+    createTrackbar("B Min", "Controls", &bmin, 255, UpdateGUI);
+    createTrackbar("R Max", "Controls", &rmax, 255, UpdateGUI);
+    createTrackbar("G Max", "Controls", &gmax, 255, UpdateGUI);
+    createTrackbar("B Max", "Controls", &bmax, 255, UpdateGUI);
+#else
     //HSV trackbars
-    createTrackbar("H Min", "Controls", &hmin, 180, UpdateGUI);
+    createTrackbar("H Min", "Controls", &hmin, 255, UpdateGUI);
     createTrackbar("S Min", "Controls", &smin, 255, UpdateGUI);
     createTrackbar("L Min", "Controls", &lmin, 255, UpdateGUI);
-    createTrackbar("H Max", "Controls", &hmax, 180, UpdateGUI);
+    createTrackbar("H Max", "Controls", &hmax, 255, UpdateGUI);
     createTrackbar("S Max", "Controls", &smax, 255, UpdateGUI);
     createTrackbar("L Max", "Controls", &lmax, 255, UpdateGUI);
-
+#endif
 #endif
 
     int rc = pthread_create(&curl_thread, NULL, GetImagesThread, NULL);
@@ -111,7 +135,6 @@ int main(int argc, char **argv)
 int process()
 {
     Mat bgrimg;
-    Mat hlsimg;
     Mat binimg;
     //Mat templ;
     //Mat result;
@@ -156,13 +179,15 @@ int process()
 #endif
 
     // / Threshold by BGR values
-    //inRange(bgrimg, Scalar(160, 0, 0), Scalar(255, 255, 255), binimg);
-
+#ifdef RGB
+    inRange(bgrimg, Scalar(bmin, gmin, rmin), Scalar(bmax, gmax, rmax), binimg);
+#else
+    Mat hlsimg;
     //convert to HLS
-    cvtColor(bgrimg, hlsimg, CV_BGR2HLS);
+    cvtColor(bgrimg, hlsimg, CV_BGR2HSV);
     //Threshold
-    inRange(hlsimg, Scalar(hmin, lmin, smin), Scalar(hmax, lmax, smax), binimg);
-
+    inRange(hlsimg, Scalar(hmin, smin, lmin), Scalar(hmax, smax, lmax), binimg);
+#endif
     // /Filter noise in image
     int erosion_type;
     if (erosion_elem == 0) {
@@ -219,7 +244,9 @@ int process()
         double area = 0;
         for (int i = 0; i < contours.size(); i++) {
             area = contourArea(contours[i]);
+#ifdef DEBUG
             cout << i << ": " << area << endl;
+#endif
             if (area > THRESH) {
                 contour_cnt++;
             }

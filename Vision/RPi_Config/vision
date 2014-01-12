@@ -1,10 +1,10 @@
 #! /bin/sh
 ### BEGIN INIT INFO
 # Provides:          vision
-# Required-Start:    $local_fs $all killprocs
+# Required-Start:    $network
 # Required-Stop:
-# Default-Start:     1
-# Default-Stop:
+# Default-Start:     2 3 4 5
+# Default-Stop:	     0 1 6
 # Short-Description: provide the FRC Vision Server 
 ### END INIT INFO
 
@@ -13,7 +13,8 @@ PATH=/sbin:/bin
 . /lib/lsb/init-functions
 
 do_start () {
-	exec /home/pi/Vision/VisionServer 2>&1 >>/tmp/VisionLog &
+	echo "tried to start" >>/media/test
+	exec /home/pi/Vision/VisionServer 2>&1 >>/media/VisionLog &
 }
 
 case "$1" in
