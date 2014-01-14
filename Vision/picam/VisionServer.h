@@ -45,9 +45,23 @@ void *ReceiveThread(void *arg);
 void *SendThread(void *arg);
 void process_frame(cv::Mat frame);
 
+typedef struct {
+	uint8_t total;
+	uint8_t horiz;
+	uint8_t vert;
+	uint8_t lhot;
+	uint8_t rhot;
+} data_t;
+
+typedef struct {
+	RotatedRect rect;
+	double area;
+	uint8_t i;
+} targetData_t;
+
 //globals
 extern pthread_mutex_t data_mutex;
 extern pthread_mutex_t img_mutex;
 extern pthread_cond_t data_ready_cond;
-extern uint8_t data;
+extern data_t data;
 extern Mat write_img;

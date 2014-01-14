@@ -17,7 +17,6 @@ void *SendThread(void *arg)
 	int s, i, slen = sizeof(si_other);
 	int rc;
 	
-	
     cout << "Starting Send Thread" << endl;
     
 	if ((s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1) {
@@ -45,7 +44,7 @@ void *SendThread(void *arg)
 			return NULL;
 		}
 	
-		if (sendto(s, (char *)&data, sizeof(int8_t), 0, (struct sockaddr *)&si_other, slen) == -1) {
+		if (sendto(s, (char *)&data, sizeof(data_t), 0, (struct sockaddr *)&si_other, slen) == -1) {
 			perror("Sendto()");
 			exit(1);
 		}

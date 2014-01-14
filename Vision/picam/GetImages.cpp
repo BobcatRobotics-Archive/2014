@@ -41,6 +41,10 @@ void process_frame(cv::Mat frame) {
     int rc;
     vector < vector < Point > >contours;
     vector < Vec4i > hierarchy;
+	bool lhot = false;
+	bool rhot = false;
+	vector<targetData_t> HRects;
+	vector<targetData_t> VRects;
 	
 	n++;
 	 // / Threshold by BGR values
@@ -99,26 +103,132 @@ void process_frame(cv::Mat frame) {
 #endif
 
     // / Check to see if any targets in the image (Avoids SEGFAULT!)
-    if (contours.size() > 0) {
+     if (contours.size() > 0) {
         // / Find contour bigger than threshold with lowest y value
         double area = 0;
+		RotatedRect rect;
+		targetData_t td;
+		float ar;		
         for (int i = 0; i < contours.size(); i++) {
             area = contourArea(contours[i]);
+			if (area < THRESH) {
 #ifdef DEBUG
-            cout << i << ": " << area << endl;
-#endif
-            if (area > THRESH) {
-                contour_cnt++;
-            }
+			cout << i << ": area: "<< area << " - Rejected" << endl;
+#endif							
+				continue;
+			}
+			td.area = area;
+			td.i = i;
+			td.rect = minAreaRect(contours[i]);
+			contour_cnt++;        
+			//Sort by aspect ratio
+			ar = td.rect.size.width/td.rect.size.height;
+#ifdef DEBUG
+			cout << i << ": area: "<< area << " ar: " << ar;
+#endif			
+			if(ar > 0.1 && ar < 0.6) {			
+				//to simplify the logic below, only record the two biggest in each orientation.
+#ifdef DEBUG
+				cout << " - Horizontal";
+#endif			
+				horiz_cnt++;
+				if(HRects.size() > 1) {
+					int small = 0;
+					if(HRects[0].area > HRects[1].area) {
+						small = 1;
+					}
+					if(HRects[small].area < td.area) {
+						HRects[small] = td;
+					}
+				} else {
+					HRects.push_back(td);	
+				}
+			} else if(ar > 2 && ar < 10) {
+#ifdef DEBUG
+				cout << " - Vertical";
+#endif			
+			vert_cnt++;
+			if(VRects.size() > 1) {
+					int small = 0;
+					if(VRects[0].area > VRects[1].area) {
+						small = 1;
+					}
+					if(VRects[small].area < td.area) {
+						VRects[small] = td;
+					}
+				} else {
+					VRects.push_back(td);	
+				}
+			}
+#ifdef DEBUG
+				cout << endl;
+#endif						
         }
-    }
+
+		//Determine which side of the goal is hot
+		//Can we see both targets?
+		if(VRects.size() > 1 && HRects.size() > 0) {
+			int h,v;
+			int vmin = 0;
+			int vmax = 0;
+			int hmin = 0;
+			int hmax = 0;
+			
+			//two or more targets - Find the left and right most target in each orientation
+			for(v = 1; v < VRects.size(); v++) {
+				if(VRects[v].rect.center.x < VRects[vmin].rect.center.x) {
+					vmin = v;
+				}
+				if(VRects[v].rect.center.x > VRects[vmax].rect.center.x) {
+					vmax = v;
+				}
+			}
+			for(h = 1; h < HRects.size(); h++) {
+				if(HRects[h].rect.center.x < HRects[hmin].rect.center.x) {
+					hmin = h;
+				}
+				if(HRects[h].rect.center.x > HRects[hmax].rect.center.x) {
+					hmax = h;
+				}
+			}
+			
+			if(HRects[hmin].rect.center.x < VRects[vmin].rect.center.x) {
+				lhot = true;
+			}
+			
+			if(HRects[hmax].rect.center.x > VRects[vmax].rect.center.x) {
+				rhot = true;
+			}
+		} else if(VRects.size() == 1 && HRects.size() > 0) {
+			//one target
+			int htarget = 0;
+			if(HRects.size() > 1) {
+				//More than one horizontal target, find the closest one
+				if(abs(HRects[1].rect.center.x - VRects[0].rect.center.x) < abs(HRects[0].rect.center.x - VRects[0].rect.center.x)) {
+					htarget = 1;
+				}
+			}
+			
+			if(HRects[htarget].rect.center.x < VRects[0].rect.center.x) {
+				lhot = true;
+			}
+			
+			if(HRects[htarget].rect.center.x > VRects[0].rect.center.x) {
+				rhot = true;
+			}
+		}
+	}
 #ifdef DEBUG
     if(contour_cnt > 0) {
-        cout << "Contours found: " << contour_cnt << endl;
+         cout << "Contours found: " << contour_cnt << " Horiz: " << HRects.size() << " Vert: " << VRects.size() << " lhot: " << lhot << " rhot: " << rhot << endl;
     }
 #endif	
 	pthread_mutex_lock(&data_mutex);
-    data = contour_cnt;
+    data.total = contour_cnt;
+	data.horiz = HRects.size();
+	data.vert = VRects.size();
+	data.lhot = lhot;
+	data.rhot = rhot;
 	// Signal the other thread that there is data available
     pthread_cond_broadcast(&data_ready_cond);
     // Release Mutex

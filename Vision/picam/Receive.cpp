@@ -61,7 +61,7 @@ void *ReceiveThread(void *arg)
                     // Write the data to a file
                     now = time(NULL);
                     tim = *(localtime(&now));
-                    					strftime(fn, 256, "/media/%F-%H%M%S.bmp", &tim);
+                    					strftime(fn, 256, "/media/%F-%H%M%S.jpg", &tim);
                     imwrite(fn, rgbimg);
                 } else if (rc == ETIMEDOUT) {
                     cout << "Timed out waiting for image in ReceiveThread\n";

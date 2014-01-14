@@ -24,7 +24,7 @@ pthread_mutex_t data_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t data_ready_cond = PTHREAD_COND_INITIALIZER;
 pthread_mutex_t img_mutex = PTHREAD_MUTEX_INITIALIZER;
 Mat write_img;
-uint8_t data = 0;
+data_tq data = 0;
 pthread_t send_thread, recv_thread;
 
 extern int erosion_elem;
