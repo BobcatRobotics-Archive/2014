@@ -25,15 +25,15 @@ Mat img_buf;
 
 int process();
 int erosion_elem = 0;
-int erosion_size = 3;
+int erosion_size = 1;
 int dilation_elem = 0;
-int dilation_size = 5;
+int dilation_size = 2;
 #define RGB
 #ifdef RGB
 int rmin = 0;
-int gmin = 222;
+int gmin = 200;
 int bmin = 0;
-int rmax = 40;
+int rmax = 70;
 int gmax = 255;
 int bmax = 255;
 #else
@@ -142,10 +142,16 @@ int process()
     //Mat img;
     Mat erodeimg;
     int contour_cnt = 0;
+	int horiz_cnt = 0;
+	int vert_cnt = 0;
     int rc;
     //Mat canny_output;
     vector < vector < Point > >contours;
     vector < Vec4i > hierarchy;
+	bool lhot = false;
+	bool rhot = false;
+	vector<targetData_t> HRects;
+	vector<targetData_t> VRects;
 #ifdef DEBUG
     clock_t begin, end;
     int clk_tck = sysconf(_SC_CLK_TCK);
@@ -242,21 +248,123 @@ int process()
     if (contours.size() > 0) {
         // / Find contour bigger than threshold with lowest y value
         double area = 0;
+		RotatedRect rect;
+		targetData_t td;
+		float ar;		
         for (int i = 0; i < contours.size(); i++) {
             area = contourArea(contours[i]);
+			if (area < THRESH) {
 #ifdef DEBUG
-            cout << i << ": " << area << endl;
-#endif
-            if (area > THRESH) {
-                contour_cnt++;
-            }
+			cout << i << ": area: "<< area << " - Rejected" << endl;
+#endif							
+				continue;
+			}
+			td.area = area;
+			td.i = i;
+			//td.rect = minAreaRect(contours[i]);
+			td.rect = boundingRect(contours[i]);
+			contour_cnt++;        
+			//Sort by aspect ratio
+			ar = (float)td.rect.width/(float)td.rect.height;
+#ifdef DEBUG
+			cout << i << ": area: "<< area << " ar: " << ar << " " << td.rect.width << "x" << td.rect.height;
+#endif			
+			if(ar > 2 && ar < 10) {			
+				//to simplify the logic below, only record the two biggest in each orientation.
+#ifdef DEBUG
+				cout << " - Horizontal";
+#endif			
+				horiz_cnt++;
+				if(HRects.size() > 1) {
+					int small = 0;
+					if(HRects[0].area > HRects[1].area) {
+						small = 1;
+					}
+					if(HRects[small].area < td.area) {
+						HRects[small] = td;
+					}
+				} else {
+					HRects.push_back(td);	
+				}
+			} else if(ar > 0.1 && ar < 0.6) {
+#ifdef DEBUG
+				cout << " - Vertical";
+#endif			
+			vert_cnt++;
+			if(VRects.size() > 1) {
+					int small = 0;
+					if(VRects[0].area > VRects[1].area) {
+						small = 1;
+					}
+					if(VRects[small].area < td.area) {
+						VRects[small] = td;
+					}
+				} else {
+					VRects.push_back(td);	
+				}
+			}
+#ifdef DEBUG
+				cout << endl;
+#endif						
         }
-    }
+
+		//Determine which side of the goal is hot
+		//Can we see both targets?
+		if(VRects.size() > 1 && HRects.size() > 0) {
+			int h,v;
+			int vmin = 0;
+			int vmax = 0;
+			int hmin = 0;
+			int hmax = 0;
+			
+			//two or more targets - Find the left and right most target in each orientation
+			for(v = 1; v < VRects.size(); v++) {
+				if(VRects[v].rect.x < VRects[vmin].rect.x) {
+					vmin = v;
+				}
+				if(VRects[v].rect.x > VRects[vmax].rect.x) {
+					vmax = v;
+				}
+			}
+			for(h = 1; h < HRects.size(); h++) {
+				if(HRects[h].rect.x < HRects[hmin].rect.x) {
+					hmin = h;
+				}
+				if(HRects[h].rect.x > HRects[hmax].rect.x) {
+					hmax = h;
+				}
+			}
+			
+			if(HRects[hmin].rect.x < VRects[vmin].rect.x) {
+				lhot = true;
+			}
+			
+			if(HRects[hmax].rect.x > VRects[vmax].rect.x) {
+				rhot = true;
+			}
+		} else if(VRects.size() == 1 && HRects.size() > 0) {
+			//one target
+			int htarget = 0;
+			if(HRects.size() > 1) {
+				//More than one horizontal target, find the closest one
+				if(abs(HRects[1].rect.x - VRects[0].rect.x) < abs(HRects[0].rect.x - VRects[0].rect.x)) {
+					htarget = 1;
+				}
+			}
+			if(HRects[htarget].rect.x < VRects[0].rect.x) {
+				lhot = true;
+			}
+			
+			if(HRects[htarget].rect.x > VRects[0].rect.x) {
+				rhot = true;
+			}
+		}
+	}
 #ifdef DEBUG
     end = times(&t);
     cout << "Count Time: " << double (end - begin) / clk_tck << endl;
     begin = times(&t);
-    cout << "Contours found: " << contour_cnt << endl;
+    cout << "Contours found: " << contour_cnt << " Horiz: " << horiz_cnt << " Vert: " << vert_cnt << " lhot: " << lhot << " rhot: " << rhot << endl; 	
 #endif
     return contour_cnt;
 }

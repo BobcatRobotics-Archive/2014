@@ -4,14 +4,13 @@
 #
 
 # Calibration Variables
-THRESH=500.0
+THRESH=100.0
 
 # Other variables
 FLAGS = -O3 `pkg-config --cflags opencv`
 PKG_CONFIG_PATH=/usr/local/opencv2.4.8/lib/pkgconfig/
 LIBS=`pkg-config --libs opencv`
-DEFINES = -DTHRESH=$(THRESH) -DDEBUG -DGUI
-# -DSIM_CAM 
+DEFINES = -DTHRESH=$(THRESH) -DDEBUG -DGUI -DSIM_CAM 
 #-DRPI -DGUI
 
 all: VisionServer SendBroadcast

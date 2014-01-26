@@ -24,8 +24,8 @@ pthread_mutex_t data_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t data_ready_cond = PTHREAD_COND_INITIALIZER;
 pthread_mutex_t img_mutex = PTHREAD_MUTEX_INITIALIZER;
 Mat write_img;
-data_tq data = 0;
-pthread_t send_thread, recv_thread;
+data_t data;
+pthread_t send_thread, recv_thread, picam_thread;
 
 extern int erosion_elem;
 extern int erosion_size;
@@ -75,6 +75,13 @@ void UpdateGUI(int x, void *p)
 void RunServer();
 int process();
 inline uint64_t endian_swap(uint64_t x);
+
+void *PiCamThread(void *arg) {
+	cout << "Starting PiCam Thread" << endl;
+	cam = new PiCam(320, 240, &process_frame);
+    cam->start();
+	cout << "Exiting PiCam Thread" << endl;
+}
 
 /**
  * @function main
@@ -131,11 +138,12 @@ int main(int argc, char **argv)
         exit(-1);
     }
 	
-    cam = new PiCam(320, 240, &process_frame);
-    //PiCam cam(640, 480, &process_frame);
-    while(1) {
-       vcos_sleep(10000);
-	   std::cout << (n / 10.0) << " FPS\n";
-	   n = 0;
+	rc = pthread_create(&picam_thread, NULL, PiCamThread, NULL);
+    if (rc) {
+        printf("ERROR; return code from pthread_create() is %d\n", rc);
+        exit(-1);
     }
+	
+	pthread_exit(0);
+
 }

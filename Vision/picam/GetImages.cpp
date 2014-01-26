@@ -16,7 +16,7 @@ int dilation_size = 2;
 int rmin = 0;
 int gmin = 200;
 int bmin = 0;
-int rmax = 255;
+int rmax = 70;
 int gmax = 255;
 int bmax = 255;
 #else
@@ -38,6 +38,8 @@ void process_frame(cv::Mat frame) {
     Mat erodeimg;
     cv::Mat_<unsigned char> dst(frame.size());
 	int contour_cnt = 0;
+	int horiz_cnt = 0;
+	int vert_cnt = 0;
     int rc;
     vector < vector < Point > >contours;
     vector < Vec4i > hierarchy;
@@ -119,14 +121,15 @@ void process_frame(cv::Mat frame) {
 			}
 			td.area = area;
 			td.i = i;
-			td.rect = minAreaRect(contours[i]);
+			//td.rect = minAreaRect(contours[i]);
+			td.rect = boundingRect(contours[i]);
 			contour_cnt++;        
 			//Sort by aspect ratio
-			ar = td.rect.size.width/td.rect.size.height;
+			ar = (float)td.rect.width/(float)td.rect.height;
 #ifdef DEBUG
-			cout << i << ": area: "<< area << " ar: " << ar;
+			cout << i << ": area: "<< area << " ar: " << ar << " " << td.rect.width << "x" << td.rect.height;
 #endif			
-			if(ar > 0.1 && ar < 0.6) {			
+			if(ar > 2 && ar < 10) {			
 				//to simplify the logic below, only record the two biggest in each orientation.
 #ifdef DEBUG
 				cout << " - Horizontal";
@@ -143,7 +146,7 @@ void process_frame(cv::Mat frame) {
 				} else {
 					HRects.push_back(td);	
 				}
-			} else if(ar > 2 && ar < 10) {
+			} else if(ar > 0.1 && ar < 0.6) {
 #ifdef DEBUG
 				cout << " - Vertical";
 #endif			
@@ -176,27 +179,27 @@ void process_frame(cv::Mat frame) {
 			
 			//two or more targets - Find the left and right most target in each orientation
 			for(v = 1; v < VRects.size(); v++) {
-				if(VRects[v].rect.center.x < VRects[vmin].rect.center.x) {
+				if(VRects[v].rect.x < VRects[vmin].rect.x) {
 					vmin = v;
 				}
-				if(VRects[v].rect.center.x > VRects[vmax].rect.center.x) {
+				if(VRects[v].rect.x > VRects[vmax].rect.x) {
 					vmax = v;
 				}
 			}
 			for(h = 1; h < HRects.size(); h++) {
-				if(HRects[h].rect.center.x < HRects[hmin].rect.center.x) {
+				if(HRects[h].rect.x < HRects[hmin].rect.x) {
 					hmin = h;
 				}
-				if(HRects[h].rect.center.x > HRects[hmax].rect.center.x) {
+				if(HRects[h].rect.x > HRects[hmax].rect.x) {
 					hmax = h;
 				}
 			}
 			
-			if(HRects[hmin].rect.center.x < VRects[vmin].rect.center.x) {
+			if(HRects[hmin].rect.x < VRects[vmin].rect.x) {
 				lhot = true;
 			}
 			
-			if(HRects[hmax].rect.center.x > VRects[vmax].rect.center.x) {
+			if(HRects[hmax].rect.x > VRects[vmax].rect.x) {
 				rhot = true;
 			}
 		} else if(VRects.size() == 1 && HRects.size() > 0) {
@@ -204,16 +207,15 @@ void process_frame(cv::Mat frame) {
 			int htarget = 0;
 			if(HRects.size() > 1) {
 				//More than one horizontal target, find the closest one
-				if(abs(HRects[1].rect.center.x - VRects[0].rect.center.x) < abs(HRects[0].rect.center.x - VRects[0].rect.center.x)) {
+				if(abs(HRects[1].rect.x - VRects[0].rect.x) < abs(HRects[0].rect.x - VRects[0].rect.x)) {
 					htarget = 1;
 				}
 			}
-			
-			if(HRects[htarget].rect.center.x < VRects[0].rect.center.x) {
+			if(HRects[htarget].rect.x < VRects[0].rect.x) {
 				lhot = true;
 			}
 			
-			if(HRects[htarget].rect.center.x > VRects[0].rect.center.x) {
+			if(HRects[htarget].rect.x > VRects[0].rect.x) {
 				rhot = true;
 			}
 		}

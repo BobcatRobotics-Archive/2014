@@ -26,8 +26,8 @@
 //#define DEBUG
 #define THRESH 200 
 #define RPI
-//#define DEBUG
-//#define GUI
+#define DEBUG
+#define GUI
 
 #ifdef RPI
 #define SRV_IP "10.1.77.2"
@@ -40,9 +40,9 @@ using namespace std;
 using namespace cv;
 
 /// Function declarations
-void *GetImagesThread(void *arg);
 void *ReceiveThread(void *arg);
 void *SendThread(void *arg);
+void *PiCamThread(void *arg);
 void process_frame(cv::Mat frame);
 
 typedef struct {
@@ -54,7 +54,7 @@ typedef struct {
 } data_t;
 
 typedef struct {
-	RotatedRect rect;
+	Rect rect;
 	double area;
 	uint8_t i;
 } targetData_t;

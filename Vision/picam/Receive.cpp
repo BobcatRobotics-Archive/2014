@@ -4,6 +4,18 @@
 #include "PiCam.hpp"
 extern PiCam *cam;
 
+extern pthread_t  picam_thread;
+pthread_t record_thread;
+bool recording = false;
+
+void *RecordThread(void *arg) {
+	recording = true;
+	cout << "Starting Record Thread" << endl;
+	system("/home/pi/picam/RecordMatch 2>&1 > /media/reclog");
+	cout << "Exiting Record Thread" << endl;
+	recording = false;
+}
+
 //UDP Receive Thread
 void *ReceiveThread(void *arg)
 {
@@ -26,8 +38,6 @@ void *ReceiveThread(void *arg)
         perror("socket in");
         exit(1);
     }
-//    setsockopt(sock_in, SOL_SOCKET, SO_BROADCAST, &broadcast, sizeof broadcast);
-//    fcntl(sock_in, F_SETFL, O_NONBLOCK);        // set to non-blocking
     memset(&si_me, 0, sizeof(si_me));
     si_me.sin_family = AF_INET;
     si_me.sin_port = htons(11177);
@@ -43,10 +53,17 @@ void *ReceiveThread(void *arg)
 #endif
             if (inbuf[0] == 'A') {
                 cout << "Starting Auto" << endl;
+				if(recording) {
+					system("sudo killall raspivid");
+				}
 				if(cam == NULL ) {
-					//restart the camera if it was stoped
-					cout << "Restarting Camera" << endl;
-					cam = new PiCam(320, 240, &process_frame);
+					//restart the camera if it was stopped
+					cout << "Restarting Camera Thread" << endl;
+					rc = pthread_create(&picam_thread, NULL, PiCamThread, NULL);
+					if (rc) {
+						printf("ERROR; return code from pthread_create() is %d\n", rc);
+						exit(-1);
+					}
 				}
                 // Store the next received image
                 pthread_mutex_lock(&img_mutex);
@@ -75,10 +92,14 @@ void *ReceiveThread(void *arg)
             } else if (inbuf[0] == 'T') {
                 cout << "Starting Teleop" << endl;
                 //switch to video recording
-				cam->Stop();
+				cam->stop();
 				delete cam;
 				cam = NULL;
-				system("/home/pi/picam/RecordMatch 2>&1 > /media/reclog &");
+				rc = pthread_create(&record_thread, NULL, RecordThread, NULL);
+				if (rc) {
+					printf("ERROR; return code from pthread_create() is %d\n", rc);
+					exit(-1);
+				}
             }
         }
     }

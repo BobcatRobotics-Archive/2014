@@ -8,8 +8,24 @@ void *GetImagesThread(void *arg)
     Mat img_in;
     CURL *curl;                 // our curl object
 #ifdef SIM_CAM
-    string url = "file://image2.bmp";
-
+    //string url = "file://imageLHot.jpg";
+	//string url = "file://imageRHot.jpg";
+	//string url = "file://imageBHot.jpg";
+	string url = "file://imageFullLHot.jpg";
+	//string url = "file://imageFullRHot.jpg";
+	//string url = "file://imageFullNHot.jpg";
+	//string url = "file://imageError1.jpg";
+	//string url = "file://imageError2.jpg";
+	//string url = "file://imageError3.jpg";
+	//string url = "file://imageError4.jpg";
+	//string url = "file://imageError5.jpg";
+	//string url = "file://imageError6.jpg";
+	//string url = "file://2014-01-15-120226.jpg";
+	//string url = "file://2014-01-15-120237.jpg";
+	//string url = "file://2014-01-15-120238.jpg";
+	//string url = "file://2014-01-15-120240.jpg";
+	//string url = "file://2014-01-15-120349.jpg";
+	//string url = "file://2014-01-15-120406.jpg";
 #else                           /*  */
     string url = "http://10.1.77.11/axis-cgi/jpg/image.cgi";
 

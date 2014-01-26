@@ -32,6 +32,13 @@
 using namespace std;
 using namespace cv;
 
+typedef struct {
+	//RotatedRect rect;
+	Rect rect;
+	double area;
+	uint8_t i;
+} targetData_t;
+
 /// Function declarations
 void *GetImagesThread(void *arg);
 void *ReceiveThread(void *arg);
