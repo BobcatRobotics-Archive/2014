@@ -132,6 +132,15 @@ DirectoryIndex index.htm
 			<Item Name="TurnToDegrees.vi" Type="VI" URL="../TurnToDegrees.vi"/>
 			<Item Name="TurnLeftRight.vi" Type="VI" URL="../TurnLeftRight.vi"/>
 			<Item Name="AutoTurnToHotFromCenter.vi" Type="VI" URL="../AutoTurnToHotFromCenter.vi"/>
+			<Item Name="AutoMultiBall.vi" Type="VI" URL="../AutoMultiBall.vi"/>
+			<Item Name="AutoMultiBallStates.ctl" Type="VI" URL="../AutoMultiBallStates.ctl"/>
+			<Item Name="ShooterStates.ctl" Type="VI" URL="../ShooterStates.ctl"/>
+			<Item Name="ShooterCmds.ctl" Type="VI" URL="../ShooterCmds.ctl"/>
+			<Item Name="Fire.vi" Type="VI" URL="../Fire.vi"/>
+			<Item Name="WaitForShooter.vi" Type="VI" URL="../WaitForShooter.vi"/>
+			<Item Name="ShooterStateMachine.vi" Type="VI" URL="../ShooterStateMachine.vi"/>
+			<Item Name="RPiReceive.vi" Type="VI" URL="../RPiReceive.vi"/>
+			<Item Name="Stop.vi" Type="VI" URL="../Stop.vi"/>
 		</Item>
 		<Item Name="Support Code" Type="Folder">
 			<Item Name="Elapsed Times.vi" Type="VI" URL="../Elapsed Times.vi"/>
@@ -140,14 +149,6 @@ DirectoryIndex index.htm
 			<Item Name="WPI_RobotDriveOpen6MotorWithVictor.vi" Type="VI" URL="../WPI_Modified/WPI_RobotDriveOpen6MotorWithVictor.vi"/>
 		</Item>
 		<Item Name="Robot Main.vi" Type="VI" URL="../Robot Main.vi"/>
-		<Item Name="AutoMultiBall.vi" Type="VI" URL="../AutoMultiBall.vi"/>
-		<Item Name="AutoMultiBallStates.ctl" Type="VI" URL="../AutoMultiBallStates.ctl"/>
-		<Item Name="ShooterStates.ctl" Type="VI" URL="../ShooterStates.ctl"/>
-		<Item Name="ShooterCmds.ctl" Type="VI" URL="../ShooterCmds.ctl"/>
-		<Item Name="Fire.vi" Type="VI" URL="../Fire.vi"/>
-		<Item Name="WaitForShooter.vi" Type="VI" URL="../WaitForShooter.vi"/>
-		<Item Name="ShooterStateMachine.vi" Type="VI" URL="../ShooterStateMachine.vi"/>
-		<Item Name="RPiReceive.vi" Type="VI" URL="../RPiReceive.vi"/>
 		<Item Name="Dependencies" Type="Dependencies">
 			<Item Name="vi.lib" Type="Folder">
 				<Item Name="Image Type" Type="VI" URL="/&lt;vilib&gt;/vision/Image Controls.llb/Image Type"/>
@@ -704,12 +705,15 @@ DirectoryIndex index.htm
 			</Item>
 			<Item Name="Position Typedef.ctl" Type="VI" URL="../Position Typedef.ctl"/>
 			<Item Name="Autonomous Data.ctl" Type="VI" URL="../Autonomous Data.ctl"/>
-			<Item Name="Stop.vi" Type="VI" URL="../Stop.vi"/>
 			<Item Name="AutoDriveForward.vi" Type="VI" URL="../AutoDriveForward.vi"/>
 			<Item Name="DriveToXY.vi" Type="VI" URL="../DriveToXY.vi"/>
 			<Item Name="Position.vi" Type="VI" URL="../Position.vi"/>
 			<Item Name="GetAutoMode.vi" Type="VI" URL="../GetAutoMode.vi"/>
 			<Item Name="WPI_RobotDriveTankDrive6.vi" Type="VI" URL="../WPI_Modified/WPI_RobotDriveTankDrive6.vi"/>
+			<Item Name="niLvFpgaFormatErrorSource.vi" Type="VI" URL="/&lt;vilib&gt;/rvi/errors/niLvFpgaFormatErrorSource.vi"/>
+			<Item Name="niLvFpgaWhatHappensToTopLevelVI.ctl" Type="VI" URL="/&lt;vilib&gt;/rvi/errors/niLvFpgaWhatHappensToTopLevelVI.ctl"/>
+			<Item Name="niFpgaNodeNameForErrorReporting.ctl" Type="VI" URL="/&lt;vilib&gt;/rvi/interface/common/niFpgaNodeNameForErrorReporting.ctl"/>
+			<Item Name="niLvFpgaAdjustHostInterfaceError.vi" Type="VI" URL="/&lt;vilib&gt;/rvi/errors/niLvFpgaAdjustHostInterfaceError.vi"/>
 		</Item>
 		<Item Name="Build Specifications" Type="Build">
 			<Item Name="FRC Robot Boot-up Deployment" Type="{69A947D5-514E-4E75-818E-69657C0547D8}">
@@ -735,7 +739,7 @@ DirectoryIndex index.htm
 				<Property Name="Destination[1].path" Type="Path">/c/ni-rt/startup/data</Property>
 				<Property Name="Destination[1].path.type" Type="Str">&lt;none&gt;</Property>
 				<Property Name="DestinationCount" Type="Int">2</Property>
-				<Property Name="Source[0].itemID" Type="Str">{0AEB2912-9AF4-4F0F-862E-F8955DE2A2DE}</Property>
+				<Property Name="Source[0].itemID" Type="Str">{DE63B543-29CB-4552-92B7-7532C9422CFA}</Property>
 				<Property Name="Source[0].type" Type="Str">Container</Property>
 				<Property Name="Source[1].destinationIndex" Type="Int">0</Property>
 				<Property Name="Source[1].itemID" Type="Ref">/RT CompactRIO Target/Robot Main.vi</Property>
