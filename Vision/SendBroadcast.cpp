@@ -7,12 +7,14 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define SRV_IP "127.0.0.1"
+//#define SRV_IP "127.0.0.1"
+#define SRV_IP "10.1.77.91"
 int main(int argc, char **argv) 
 {
     struct sockaddr_in si_other;
     int s, i, slen = sizeof(si_other);
     char buff[256] = "AUTO";
+    //char buff[256] = "TELE";
     int8_t result;
     if ((s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1) {
         perror("socket");
