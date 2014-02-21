@@ -134,6 +134,11 @@ PiCam::PiCam(unsigned int width, unsigned int height, std::function<void(cv::Mat
 
     status = mmal_port_parameter_set(cameraComponent->control, &exp_mode.hdr);
 
+	//Set exposure compensation, valid values are -25..25
+	mmal_port_parameter_set_int32(cameraComponent->control, MMAL_PARAMETER_EXPOSURE_COMP, -25);
+	
+	mmal_port_parameter_set_uint32(cameraComponent->control, MMAL_PARAMETER_ISO, 100);
+	
     status = mmal_component_enable(cameraComponent);
 
     //

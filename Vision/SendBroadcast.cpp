@@ -13,7 +13,7 @@
 {
     struct sockaddr_in si_other;
     int s, i, slen = sizeof(si_other);
-    char buff[256] = "AUTO";
+    //char buff[256] = "AUTO";
     //char buff[256] = "TELE";
     int8_t result;
     if ((s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1) {
@@ -40,7 +40,8 @@
     }
     
 #endif                          /*  */
-        if (sendto(s, (char *)&buff, strlen(buff) + 1, 0, (struct sockaddr *)&si_other, slen) == -1) {
+ printf("%s\n", argv[1]);
+        if (sendto(s, (char *)argv[1], strlen(argv[1]) + 1, 0, (struct sockaddr *)&si_other, slen) == -1) {
         perror("Sendto()");
         exit(1);
     }

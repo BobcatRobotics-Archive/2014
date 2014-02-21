@@ -16,7 +16,7 @@ int dilation_size = 2;
 int rmin = 0;
 int gmin = 200;
 int bmin = 0;
-int rmax = 70;
+int rmax = 255;
 int gmax = 255;
 int bmax = 255;
 #else
