@@ -14,7 +14,7 @@ include_directories(/opt/vc/src/hello_pi/libs/vgfont)
 link_directories(/opt/vc/lib)
 link_directories(/opt/vc/src/hello_pi/libs/vgfont)
 
-add_executable(vision PiCam.cpp GetImages.cpp Receive.cpp Send.cpp VisionServer.cpp)
+add_executable(vision PiCam.cpp GetImages.cpp Receive.cpp Send.cpp VisionServer.cpp WebServer.cpp)
 
 find_package( OpenCV REQUIRED )
 

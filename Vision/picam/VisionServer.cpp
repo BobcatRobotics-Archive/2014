@@ -25,7 +25,7 @@ pthread_cond_t data_ready_cond = PTHREAD_COND_INITIALIZER;
 pthread_mutex_t img_mutex = PTHREAD_MUTEX_INITIALIZER;
 Mat write_img;
 data_t data;
-pthread_t send_thread, recv_thread, picam_thread;
+pthread_t send_thread, recv_thread, picam_thread, web_thread;
 
 extern int erosion_elem;
 extern int erosion_size;
@@ -139,6 +139,12 @@ int main(int argc, char **argv)
     }
 	
 	rc = pthread_create(&picam_thread, NULL, PiCamThread, NULL);
+    if (rc) {
+        printf("ERROR; return code from pthread_create() is %d\n", rc);
+        exit(-1);
+    }
+	
+	rc = pthread_create(&web_thread, NULL, WebThread, NULL);
     if (rc) {
         printf("ERROR; return code from pthread_create() is %d\n", rc);
         exit(-1);

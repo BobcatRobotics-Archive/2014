@@ -14,7 +14,7 @@ int dilation_size = 2;
 #define RGB
 #ifdef RGB
 int rmin = 0;
-int gmin = 200;
+int gmin = 140;
 int bmin = 0;
 int rmax = 255;
 int gmax = 255;

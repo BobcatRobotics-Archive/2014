@@ -26,11 +26,12 @@
 //#define DEBUG
 #define THRESH 200 
 #define RPI
-#define DEBUG
-#define GUI
+//#define DEBUG
+//#define GUI
 
 #ifdef RPI
 #define SRV_IP "10.1.77.2"
+//#define SRV_IP "10.1.77.42"
 #else
 #define SRV_IP "127.0.0.1"
 #endif
@@ -44,6 +45,7 @@ void *ReceiveThread(void *arg);
 void *SendThread(void *arg);
 void *PiCamThread(void *arg);
 void process_frame(cv::Mat frame);
+void *WebThread(void * arg);
 
 typedef struct {
 	uint8_t total;

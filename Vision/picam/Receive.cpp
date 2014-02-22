@@ -16,6 +16,8 @@ void *RecordThread(void *arg) {
 	recording = false;
 }
 
+
+
 //UDP Receive Thread
 void *ReceiveThread(void *arg)
 {
@@ -55,6 +57,7 @@ void *ReceiveThread(void *arg)
                 cout << "Starting Auto" << endl;
 				if(recording) {
 					system("sudo killall raspivid");
+					recording = false;
 				}
 				if(cam == NULL ) {
 					//restart the camera if it was stopped
