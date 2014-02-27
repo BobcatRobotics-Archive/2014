@@ -29,6 +29,8 @@ void PiCam::video_buffer_callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffe
     if (vcos_semaphore_trywait(&(cam->frame_semaphore)) != VCOS_SUCCESS) {
         vcos_semaphore_post(&(cam->frame_semaphore));
     }
+	
+	mmal_port_parameter_set_uint32(cam->cameraComponent->control, MMAL_PARAMETER_SHUTTER_SPEED, 10000);
 
 
     // and send one back to the port (if still open)
@@ -135,9 +137,11 @@ PiCam::PiCam(unsigned int width, unsigned int height, std::function<void(cv::Mat
     status = mmal_port_parameter_set(cameraComponent->control, &exp_mode.hdr);
 
 	//Set exposure compensation, valid values are -25..25
-	mmal_port_parameter_set_int32(cameraComponent->control, MMAL_PARAMETER_EXPOSURE_COMP, -25);
+	mmal_port_parameter_set_int32(cameraComponent->control, MMAL_PARAMETER_EXPOSURE_COMP, -10);
 	
-	mmal_port_parameter_set_uint32(cameraComponent->control, MMAL_PARAMETER_ISO, 100);
+	mmal_port_parameter_set_uint32(cameraComponent->control, MMAL_PARAMETER_ISO, 800);
+	
+	printf("%d\n", mmal_port_parameter_set_uint32(cameraComponent->control, MMAL_PARAMETER_SHUTTER_SPEED, 10000));  //1/100 = 10000
 	
     status = mmal_component_enable(cameraComponent);
 
@@ -200,6 +204,8 @@ void PiCam::start() {
     while(running) {
         if(vcos_semaphore_wait(&frame_semaphore) == VCOS_SUCCESS) {
             callback(frame);
+			
+			mmal_port_parameter_set_uint32(cameraComponent->control, MMAL_PARAMETER_SHUTTER_SPEED, 10000);
 
             ++numFrames;
 

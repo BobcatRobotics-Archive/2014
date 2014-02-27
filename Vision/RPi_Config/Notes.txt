@@ -1,22 +1,32 @@
-0. install appropriate libraries:
-apt-get update
-apt-get upgrade
-apt-get install libcurl4-openssl-dev
-apt-get install libopencv-dev
-apt-get install rpi-update
-rpi-update
-
-sudo apt-get install gpac
+0. Flash wheeze-raspian.img with Win32 Disk Imager
 
 
-run raspi-config and enable turbo overclocking
-
-1. install vision server in /home/pi/Vision
-2. copy vision to /etc/init.d
-3. edit /etc/network/interfaces
+1. edit /etc/network/interfaces
 iface eth0 inet static
 address 10.1.77.91
 netmask 255.255.255.0
+
+iface wlan0 inet dhcp 
+wpa-ssid "prescoguest"
+wpa-psk "dowhile1"
+
+1.
+run raspi-config:
+enable turbo overclocking
+expand-rootfs
+enable camera
+
+
+1. install appropriate libraries:
+apt-get update
+apt-get upgrade
+apt-get install libcurl4-openssl-dev libopencv-dev rpi-update tightvncserver
+rpi-update
+
+sudo apt-get install gpac 
+
+1. install vision server in /home/pi/Vision
+2. copy vision to /etc/init.d
 
 4. Run:
 sudo update-rc.d vision defaults
@@ -26,9 +36,8 @@ add the following line to /etc/fstab (mounts usb drive at boot)
 /dev/sda1       /media          vfat    rw,user,exec,umask=000  0       1
 
 
-
 --
-sudo apt-get install g++-4.7
+sudo apt-get install g++-4.7 cmake
 sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.6 60 --slave /usr/bin/g++ g++ /usr/bin/g++-4.6 
 sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.7 40 --slave /usr/bin/g++ g++ /usr/bin/g++-4.7 
 sudo update-alternatives --config gcc
