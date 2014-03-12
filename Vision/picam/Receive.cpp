@@ -16,8 +16,6 @@ void *RecordThread(void *arg) {
 	recording = false;
 }
 
-
-
 //UDP Receive Thread
 void *ReceiveThread(void *arg)
 {
@@ -103,7 +101,10 @@ void *ReceiveThread(void *arg)
 					printf("ERROR; return code from pthread_create() is %d\n", rc);
 					exit(-1);
 				}
-            }
+            } else if (inbuf[0] == 'R') {
+				cout <<"exiitng" << endl;
+				exit(1);
+			} 
         }
     }
 }

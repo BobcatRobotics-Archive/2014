@@ -21,7 +21,12 @@ void PiCam::video_buffer_callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffe
         mmal_buffer_header_mem_unlock(buffer);
         //cam->callback(cam->frame);
         //cv::waitKey(1);
-    }
+    } else {
+	    printf("buffer empty\n");
+		// release buffer back to the pool
+		mmal_buffer_header_release(buffer);
+		return;
+	}
     
     // release buffer back to the pool
     mmal_buffer_header_release(buffer);
@@ -30,7 +35,7 @@ void PiCam::video_buffer_callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffe
         vcos_semaphore_post(&(cam->frame_semaphore));
     }
 	
-	mmal_port_parameter_set_uint32(cam->cameraComponent->control, MMAL_PARAMETER_SHUTTER_SPEED, 10000);
+	//mmal_port_parameter_set_uint32(cam->cameraComponent->control, MMAL_PARAMETER_SHUTTER_SPEED, 10000);
 
 
     // and send one back to the port (if still open)
@@ -57,13 +62,14 @@ PiCam::PiCam(unsigned int width, unsigned int height, std::function<void(cv::Mat
 
     MMAL_STATUS_T status;
 	status = mmal_component_create(MMAL_COMPONENT_DEFAULT_CAMERA, &cameraComponent);
-
     if(status != MMAL_SUCCESS) throw std::runtime_error("Couldn't create camera component.");
     if(!cameraComponent->output_num) throw std::runtime_error("Camera doesn't have output ports.");
 
+	//std::cout << "cameraComponent created" << std::endl;
+
 	videoPort = cameraComponent->output[MMAL_CAMERA_VIDEO_PORT];
 	stillPort = cameraComponent->output[MMAL_CAMERA_CAPTURE_PORT];
-
+	
 	{
 	   MMAL_PARAMETER_CAMERA_CONFIG_T cam_config =
 	   {
@@ -99,10 +105,8 @@ PiCam::PiCam(unsigned int width, unsigned int height, std::function<void(cv::Mat
 
     status = mmal_port_format_commit(videoPort);
     if(status) throw std::runtime_error("Couldn't set video format.");
-
     status = mmal_port_enable(videoPort, PiCam::video_buffer_callback);
     if(status) throw std::runtime_error("Couldn't enable video buffer callback");
-
     if (videoPort->buffer_num < VIDEO_OUTPUT_BUFFERS_NUM)
         videoPort->buffer_num = VIDEO_OUTPUT_BUFFERS_NUM;
 
@@ -131,49 +135,35 @@ PiCam::PiCam(unsigned int width, unsigned int height, std::function<void(cv::Mat
 
     videoPool = mmal_port_pool_create(videoPort, videoPort->buffer_num, videoPort->buffer_size);
     if(!videoPool) throw std::runtime_error("Couldn't create buffer header pool for video output port");
-
     MMAL_PARAMETER_EXPOSUREMODE_T exp_mode = {{MMAL_PARAMETER_EXPOSURE_MODE,sizeof(exp_mode)}, MMAL_PARAM_EXPOSUREMODE_FIXEDFPS};
 
-    status = mmal_port_parameter_set(cameraComponent->control, &exp_mode.hdr);
+    if(MMAL_SUCCESS != mmal_port_parameter_set(cameraComponent->control, &exp_mode.hdr)) {
+		throw std::runtime_error("Error setting exposure mode");
+	}
 
 	//Set exposure compensation, valid values are -25..25
-	mmal_port_parameter_set_int32(cameraComponent->control, MMAL_PARAMETER_EXPOSURE_COMP, -10);
+	if(MMAL_SUCCESS != mmal_port_parameter_set_int32(cameraComponent->control, MMAL_PARAMETER_EXPOSURE_COMP, -10)) {
+		throw std::runtime_error("Error setting exposure mode");
+	}
 	
-	mmal_port_parameter_set_uint32(cameraComponent->control, MMAL_PARAMETER_ISO, 800);
+	if(MMAL_SUCCESS != mmal_port_parameter_set_uint32(cameraComponent->control, MMAL_PARAMETER_ISO, 800)) {
+		throw std::runtime_error("Error setting iso");
+	}
 	
-	printf("%d\n", mmal_port_parameter_set_uint32(cameraComponent->control, MMAL_PARAMETER_SHUTTER_SPEED, 10000));  //1/100 = 10000
+	if(MMAL_SUCCESS != mmal_port_parameter_set_uint32(cameraComponent->control, MMAL_PARAMETER_SHUTTER_SPEED, 10000)) {
+		throw std::runtime_error("Error setting shutter speed");
+	}
 	
-    status = mmal_component_enable(cameraComponent);
-
-    //
+    if(MMAL_SUCCESS != mmal_component_enable(cameraComponent)) {
+		throw std::runtime_error("Error enabling camera");
+	}
     frame = cv::Mat(height, width, CV_8UC3);
 
     videoPort->userdata = (struct MMAL_PORT_USERDATA_T*)this;
-
-    /*
-    if (mmal_port_parameter_set_boolean(videoPort, MMAL_PARAMETER_CAPTURE, 1) != MMAL_SUCCESS)
-    {
-        throw std::runtime_error("Couldn't start video capture");
-    }
-
-    int num = mmal_queue_length(videoPool->queue);
-    int q;
-    for (q=0;q<num;q++)
-    {
-        MMAL_BUFFER_HEADER_T *buffer = mmal_queue_get(videoPool->queue);
-    
-        // TODO: Add numbers to these error messages.
-        if (!buffer)
-            throw std::runtime_error("Unable to get a required buffer from pool queue");
-    
-        if (mmal_port_send_buffer(videoPort, buffer)!= MMAL_SUCCESS)
-            throw std::runtime_error("Unable to send a buffer to an encoder output port");
-    }
-    */
-
 }
 
 void PiCam::start() {
+	std::cout << "Starting PiCam\n";
     if (mmal_port_parameter_set_boolean(videoPort, MMAL_PARAMETER_CAPTURE, 1) != MMAL_SUCCESS)
     {
         throw std::runtime_error("Couldn't start video capture");
@@ -205,7 +195,7 @@ void PiCam::start() {
         if(vcos_semaphore_wait(&frame_semaphore) == VCOS_SUCCESS) {
             callback(frame);
 			
-			mmal_port_parameter_set_uint32(cameraComponent->control, MMAL_PARAMETER_SHUTTER_SPEED, 10000);
+			//mmal_port_parameter_set_uint32(cameraComponent->control, MMAL_PARAMETER_SHUTTER_SPEED, 10000);
 
             ++numFrames;
 
@@ -213,12 +203,14 @@ void PiCam::start() {
                 t2 = std::chrono::system_clock::now();
                 std::chrono::duration<float> secs = t2-t1;
                 t1 = t2;
-                std::cout << (numFrames / secs.count()) << " FPS\n";
+                std::cout << (numFrames / secs.count()) << " FPS\n" <<std::flush;
                 numFrames = 0;
             }
 
             cv::waitKey(1);
-        }
+        } else {
+			std::cout << "semaphore_wait fail\n";
+		}
     }
 }
 

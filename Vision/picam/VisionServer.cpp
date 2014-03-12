@@ -143,13 +143,11 @@ int main(int argc, char **argv)
         printf("ERROR; return code from pthread_create() is %d\n", rc);
         exit(-1);
     }
-	
 	rc = pthread_create(&web_thread, NULL, WebThread, NULL);
     if (rc) {
         printf("ERROR; return code from pthread_create() is %d\n", rc);
         exit(-1);
     }
-	
 	pthread_exit(0);
 
 }
