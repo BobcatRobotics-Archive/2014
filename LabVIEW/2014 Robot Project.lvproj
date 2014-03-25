@@ -151,6 +151,7 @@ DirectoryIndex index.htm
 			<Item Name="ShooterState.vi" Type="VI" URL="../ShooterState.vi"/>
 			<Item Name="ShooterButton.vi" Type="VI" URL="../ShooterButton.vi"/>
 			<Item Name="GetShooterRefs.vi" Type="VI" URL="../GetShooterRefs.vi"/>
+			<Item Name="DriveDistanceAngle.vi" Type="VI" URL="../DriveDistanceAngle.vi"/>
 		</Item>
 		<Item Name="Support Code" Type="Folder">
 			<Item Name="Elapsed Times.vi" Type="VI" URL="../Elapsed Times.vi"/>
@@ -159,7 +160,6 @@ DirectoryIndex index.htm
 			<Item Name="WPI_RobotDriveOpen6MotorWithVictor.vi" Type="VI" URL="../WPI_Modified/WPI_RobotDriveOpen6MotorWithVictor.vi"/>
 		</Item>
 		<Item Name="Robot Main.vi" Type="VI" URL="../Robot Main.vi"/>
-		<Item Name="DriveDistanceAngle.vi" Type="VI" URL="../DriveDistanceAngle.vi"/>
 		<Item Name="Dependencies" Type="Dependencies">
 			<Item Name="vi.lib" Type="Folder">
 				<Item Name="Image Type" Type="VI" URL="/&lt;vilib&gt;/vision/Image Controls.llb/Image Type"/>
