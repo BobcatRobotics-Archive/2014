@@ -44,6 +44,7 @@
 		<Property Name="target.FPProtocolGlobals_ControlTimeLimit" Type="Int">300</Property>
 		<Property Name="target.getDefault-&gt;WebServer.Port" Type="Int">80</Property>
 		<Property Name="target.getDefault-&gt;WebServer.Timeout" Type="Int">60</Property>
+		<Property Name="target.IOScan.Enabled" Type="Bool">true</Property>
 		<Property Name="target.IOScan.Faults" Type="Str"></Property>
 		<Property Name="target.IOScan.NetVarPeriod" Type="UInt">100</Property>
 		<Property Name="target.IOScan.NetWatchdogEnabled" Type="Bool">false</Property>
@@ -151,7 +152,7 @@ DirectoryIndex index.htm
 			<Item Name="ShooterState.vi" Type="VI" URL="../ShooterState.vi"/>
 			<Item Name="ShooterButton.vi" Type="VI" URL="../ShooterButton.vi"/>
 			<Item Name="GetShooterRefs.vi" Type="VI" URL="../GetShooterRefs.vi"/>
-			<Item Name="DriveDistanceAngle.vi" Type="VI" URL="../DriveDistanceAngle.vi"/>
+			<Item Name="DriveDistanceAngle.vi" Type="VI" URL="../../DriveDistanceAngle.vi"/>
 		</Item>
 		<Item Name="Support Code" Type="Folder">
 			<Item Name="Elapsed Times.vi" Type="VI" URL="../Elapsed Times.vi"/>
@@ -723,6 +724,7 @@ DirectoryIndex index.htm
 			<Item Name="WPI_RobotDriveTankDrive6.vi" Type="VI" URL="../WPI_Modified/WPI_RobotDriveTankDrive6.vi"/>
 			<Item Name="EncoderCmds.ctl" Type="VI" URL="../EncoderCmds.ctl"/>
 			<Item Name="WinchEncoder.vi" Type="VI" URL="../WinchEncoder.vi"/>
+			<Item Name="DriveDistanceAngle.vi" Type="VI" URL="../DriveDistanceAngle.vi"/>
 			<Item Name="niLvFpgaFormatErrorSource.vi" Type="VI" URL="/&lt;vilib&gt;/rvi/errors/niLvFpgaFormatErrorSource.vi"/>
 			<Item Name="niLvFpgaWhatHappensToTopLevelVI.ctl" Type="VI" URL="/&lt;vilib&gt;/rvi/errors/niLvFpgaWhatHappensToTopLevelVI.ctl"/>
 			<Item Name="niFpgaNodeNameForErrorReporting.ctl" Type="VI" URL="/&lt;vilib&gt;/rvi/interface/common/niFpgaNodeNameForErrorReporting.ctl"/>
